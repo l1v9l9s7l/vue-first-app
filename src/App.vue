@@ -19,6 +19,20 @@
                 placeholder="Например DOGE"
               />
             </div>
+            <label for="wallet" class="block text-sm font-medium text-gray-700">
+              Price {{ price }}
+            </label>
+            <div class="mt-1 relative rounded-md shadow-md">
+              <input
+                v-model="price"
+                @keydown.enter="add"
+                type="text"
+                name="wallet"
+                id="wallet"
+                class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
+                placeholder="Price"
+              />
+            </div>
           </div>
         </div>
         <button
@@ -42,14 +56,12 @@
           Добавить
         </button>
       </section>
-      <!-- v-if="tickers.length" -->
-      <template>
+      <section>
         <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
             v-for="t in tickers"
-            :key="t.name"
-            @click="sel = t"
+            v-bind:key="t"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
@@ -62,7 +74,7 @@
             </div>
             <div class="w-full border-t border-gray-200"></div>
             <button
-              @click="handleDelete(t)"
+              @click="deleteTickerHandle(t)"
               class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
             >
               <svg
@@ -82,8 +94,11 @@
             </button>
           </div>
         </dl>
-        <hr class="w-full border-t border-gray-600 my-4" />
-      </template>
+        <hr
+          v-if="tickers.length > 0"
+          class="w-full border-t border-gray-600 my-4"
+        />
+      </section>
       <section class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           VUE - USD
@@ -133,9 +148,26 @@ export default {
   data() {
     return {
       ticker: "",
+      price: "",
+      tickers: [
+        { name: "RUB", price: "30" },
+        { name: "EUR", price: "0.75" },
+        { name: "GLD", price: "0.01" },
+      ],
     };
   },
   components: {},
+  methods: {
+    add() {
+      const newTicker = { name: this.ticker, price: this.price };
+      this.tickers.push(newTicker);
+      this.ticker = "";
+      this.price = "";
+    },
+    deleteTickerHandle(tickerToRemove) {
+      this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
+    },
+  },
 };
 </script>
 
