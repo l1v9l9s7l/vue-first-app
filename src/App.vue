@@ -4,6 +4,7 @@
       <div class="w-full my-4"></div>
       <section>
         <div class="flex">
+          <!-- ИНПУТЫ -->
           <div class="max-w-xs">
             <label for="wallet" class="block text-sm font-medium text-gray-700">
               Тикер {{ ticker }}
@@ -17,20 +18,6 @@
                 id="wallet"
                 class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
                 placeholder="Например DOGE"
-              />
-            </div>
-            <label for="wallet" class="block text-sm font-medium text-gray-700">
-              Price {{ price }}
-            </label>
-            <div class="mt-1 relative rounded-md shadow-md">
-              <input
-                v-model="price"
-                @keydown.enter="add"
-                type="text"
-                name="wallet"
-                id="wallet"
-                class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                placeholder="Price"
               />
             </div>
           </div>
@@ -56,12 +43,17 @@
           Добавить
         </button>
       </section>
+      <!-- КАРТОЧКИ -->
       <section>
         <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
             v-for="t in tickers"
             v-bind:key="t"
+            @click="select(t)"
+            :class="{
+              'border-4': sel === t,
+            }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
@@ -74,7 +66,7 @@
             </div>
             <div class="w-full border-t border-gray-200"></div>
             <button
-              @click="deleteTickerHandle(t)"
+              @click.stop="deleteTickerHandle(t)"
               class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
             >
               <svg
@@ -99,15 +91,18 @@
           class="w-full border-t border-gray-600 my-4"
         />
       </section>
-      <section class="relative">
+      <!-- ГРАФИК -->
+      <section class="relative" v-if="sel !== null">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          VUE - USD
+          {{ sel.name }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
-          <div class="bg-purple-800 border w-10 h-24"></div>
-          <div class="bg-purple-800 border w-10 h-32"></div>
-          <div class="bg-purple-800 border w-10 h-48"></div>
-          <div class="bg-purple-800 border w-10 h-16"></div>
+          <div
+            v-for="(bar, idx) in normalizeGraph()"
+            :key="idx"
+            class="bg-purple-800 border w-10"
+            :style="{ height: bar + 'px' }"
+          ></div>
         </div>
         <button
           @click="sel = null"
@@ -148,24 +143,50 @@ export default {
   data() {
     return {
       ticker: "",
-      price: "",
-      tickers: [
-        { name: "RUB", price: "30" },
-        { name: "EUR", price: "0.75" },
-        { name: "GLD", price: "0.01" },
-      ],
+      //массив карточек
+      tickers: [],
+      //текущий выбрнный элемент
+      sel: null,
+      //массив со значениями цены для построения графика
+      graph: [],
     };
   },
   components: {},
   methods: {
     add() {
-      const newTicker = { name: this.ticker, price: this.price };
+      const newTicker = { name: this.ticker, price: "Please wait" };
       this.tickers.push(newTicker);
+      //Очищаем поле ввода тикера
       this.ticker = "";
-      this.price = "";
+      //Делаем запрос к API, получаем стоимость монеты и кладем ответ в переменную data
+      setInterval(async () => {
+        const f = await fetch(
+          `https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=95b1edb2b80afb2c0c3b683e092e1eb100b7382abe209ceaabd3181a357bd11c`
+        );
+        const data = await f.json();
+        //в массиве карточек ищем карточку с таким же полем name
+        this.tickers.find((t) => t.name === newTicker.name).price = data.USD;
+        if (this.sel !== null && this.sel?.name === newTicker.name) {
+          this.graph.push(data.USD);
+        }
+      }, 3000);
+    },
+    select(ticker) {
+      this.sel = ticker;
+      this.graph = [];
     },
     deleteTickerHandle(tickerToRemove) {
       this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
+      this.sel = null;
+    },
+    //Функция возвращает массив
+    normalizeGraph() {
+      const maxValue = Math.max(...this.graph);
+      const minValue = Math.min(...this.graph);
+      if (this.graph.length === 0 || maxValue === minValue) return [];
+      return this.graph.map(
+        (price) => 5 + ((price - minValue) * 95) / (maxValue - minValue)
+      );
     },
   },
 };
